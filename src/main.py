@@ -1,26 +1,42 @@
+import argparse
 import requests
 import sys
 from xml.etree import ElementTree as xml
 
-def main():
+def parse_sitemap(content: str):
     try:
-        response = requests.get("https://freetrade.io/sitemap.xml")
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Error fetching sitemap: {e}", file=sys.stderr)
-        sys.exit(1)
- 
-    try:
-        root = xml.fromstring(response.content)
+        root = xml.fromstring(content)
+
+        for url_element in root.findall(".//{*}url"):
+            loc_element = url_element.find(".//{*}loc")
+            if loc_element is not None:
+                print(loc_element.text)
     except xml.ParseError as e:
         print(f"Error parsing XML: {e}", file=sys.stderr)
         sys.exit(1)
 
-    NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-    for child in root:
-        url_element = child.find("sm:loc", NS)
-        if url_element is not None:
-            print(url_element.text)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("source", help="path or URL to sitemap")
+    args = parser.parse_args()
+    source = args.source
+
+    try:
+        if source.startswith("http"):
+            response = requests.get(source)
+            response.raise_for_status()
+            content = response.text
+        else:
+            with open(source, "r") as file:
+                content = file.read()
+
+        parse_sitemap(content)
+    except requests.RequestException as e:
+        print(f"Error fetching sitemap from \"{source}\": {e}", file=sys.stderr)
+        sys.exit(1)
+    except (OSError, ValueError) as e:
+        print(f"Failed to read file \"{source}\": {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
