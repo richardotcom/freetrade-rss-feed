@@ -15,7 +15,7 @@ def group_urls_by_subdirectory(urls: list[str]) -> dict:
 
     return grouped_urls
 
-def parse_sitemap(content: str):
+def parse_sitemap(content: str) -> list[str]:
     try:
         root = xml.fromstring(content)
 
@@ -26,10 +26,7 @@ def parse_sitemap(content: str):
             if loc_element is not None:
                 urls.append(loc_element.text)
 
-        grouped_urls = group_urls_by_subdirectory(urls)
-
-        for subdirectory, urls_containing_subdirectory in grouped_urls.items():
-            print(f"{subdirectory}: {len(urls_containing_subdirectory)}")
+        return urls
     except xml.ParseError as e:
         print(f"Error parsing XML: {e}", file=sys.stderr)
         sys.exit(1)
@@ -50,7 +47,11 @@ def main():
             with open(source, "r") as file:
                 content = file.read()
 
-        parse_sitemap(content)
+        urls = parse_sitemap(content)
+        grouped_urls = group_urls_by_subdirectory(urls)
+
+        for subdirectory, urls_containing_subdirectory in grouped_urls.items():
+            print(f"{subdirectory}: {len(urls_containing_subdirectory)}")
     except requests.RequestException as e:
         print(f"Error fetching sitemap from \"{source}\": {e}", file=sys.stderr)
         sys.exit(1)
